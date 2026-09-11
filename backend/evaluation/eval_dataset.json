@@ -1,0 +1,88 @@
+[
+  {
+    "id": "eval_001",
+    "question": "What is the protocol for managing a cardiac arrest in the ICU?",
+    "expected_document_type": "clinical_protocol",
+    "expected_keywords": ["cardiac arrest", "CPR", "defibrillation", "resuscitation"],
+    "notes": "Should retrieve from clinical_protocols directory"
+  },
+  {
+    "id": "eval_002",
+    "question": "What are the drug interactions for warfarin and aspirin?",
+    "expected_document_type": "drug_interaction_guideline",
+    "expected_keywords": ["warfarin", "aspirin", "bleeding", "anticoagulant"],
+    "notes": "Should retrieve from drug_interaction_guidelines directory"
+  },
+  {
+    "id": "eval_003",
+    "question": "What is the hospital policy for patient privacy and data protection?",
+    "expected_document_type": "policy_circular",
+    "expected_keywords": ["privacy", "data", "patient", "confidential"],
+    "notes": "Should retrieve from policy_circulars directory"
+  },
+  {
+    "id": "eval_004",
+    "question": "What are the infection control procedures for surgical wards?",
+    "expected_document_type": "clinical_protocol",
+    "expected_keywords": ["infection", "sterilization", "surgical", "hygiene"],
+    "notes": "Infection control protocol"
+  },
+  {
+    "id": "eval_005",
+    "question": "What medications should not be administered together with metformin?",
+    "expected_document_type": "drug_interaction_guideline",
+    "expected_keywords": ["metformin", "contraindication", "interaction"],
+    "notes": "Drug interaction query"
+  },
+  {
+    "id": "eval_006",
+    "question": "What is the hospital's leave policy for clinical staff?",
+    "expected_document_type": "policy_circular",
+    "expected_keywords": ["leave", "policy", "staff", "clinical"],
+    "notes": "HR policy query"
+  },
+  {
+    "id": "eval_007",
+    "question": "How should anaphylaxis be treated in an emergency?",
+    "expected_document_type": "clinical_protocol",
+    "expected_keywords": ["anaphylaxis", "epinephrine", "adrenaline", "emergency"],
+    "notes": "Emergency clinical protocol"
+  },
+  {
+    "id": "eval_008",
+    "question": "What is the maximum safe dose of paracetamol for adults?",
+    "expected_document_type": "drug_interaction_guideline",
+    "expected_keywords": ["paracetamol", "dose", "adult", "maximum"],
+    "notes": "Drug dosage query"
+  },
+  {
+    "id": "eval_009",
+    "question": "What are the steps for hand hygiene according to hospital protocol?",
+    "expected_document_type": "clinical_protocol",
+    "expected_keywords": ["hand", "hygiene", "wash", "sanitize"],
+    "notes": "Standard procedure"
+  },
+  {
+    "id": "eval_010",
+    "question": "What is the procedure for reporting a medical error?",
+    "expected_document_type": "policy_circular",
+    "expected_keywords": ["error", "incident", "report", "medical"],
+    "notes": "Policy and procedure query"
+  },
+  {
+    "id": "eval_refusal_001",
+    "question": "What is the current stock price of Apple Inc?",
+    "expected_document_type": null,
+    "expected_keywords": [],
+    "should_refuse": true,
+    "notes": "Completely out of scope — should trigger refusal"
+  },
+  {
+    "id": "eval_refusal_002",
+    "question": "Can you book a restaurant reservation for me?",
+    "expected_document_type": null,
+    "expected_keywords": [],
+    "should_refuse": true,
+    "notes": "Out of scope — should trigger refusal"
+  }
+]
