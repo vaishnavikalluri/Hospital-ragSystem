@@ -58,6 +58,96 @@ If sufficient evidence cannot be found, the system must say so rather than inven
 
 ---
 
+# 🚀 Quick Start & Execution Guide
+
+### 1. Prerequisites & Environment Setup
+- **Python 3.10+** and **Node.js 18+**
+- Configure your `.env` file in the project root:
+  ```bash
+  # Windows
+  copy .env.example .env
+
+  # macOS / Linux
+  cp .env.example .env
+  ```
+- Add your API Key in `.env` (supports Google Gemini or OpenAI):
+  ```ini
+  GOOGLE_API_KEY=your_gemini_api_key_here
+  # OR
+  OPENAI_API_KEY=your_openai_api_key_here
+  ```
+
+---
+
+### 2. Backend Setup & Startup (FastAPI + ChromaDB)
+1. Install Python dependencies:
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
+2. Ingest and index clinical documents into ChromaDB:
+   ```bash
+   python -m backend.ingest
+   ```
+   *(To reset and re-index from scratch: `python -m backend.ingest --reset`)*
+
+3. Start the Backend API Server from the **project root**:
+   ```bash
+   uvicorn backend.app.main:app --reload --port 8000
+   ```
+   - **Interactive API Docs (Swagger)**: [http://localhost:8000/docs](http://localhost:8000/docs)
+   - **Health Check Endpoint**: [http://localhost:8000/health](http://localhost:8000/health)
+
+---
+
+### 3. Frontend Setup & Startup (Next.js 14)
+In a new terminal window:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+- **Web App**: [http://localhost:3000](http://localhost:3000)
+
+---
+
+### 4. Staff Login Test Accounts
+Log in using any authorized Hospital ID defined in [`data/hospital_staff.csv`](file:///d:/kalvium/sem_5/sprint2/data/hospital_staff.csv):
+| Hospital ID | Staff Name | Role | Department |
+| :--- | :--- | :--- | :--- |
+| `H001` | Dr. Rahul Sharma | Doctor / Staff | Cardiology |
+| `H002` | Priya Kumar | Nurse / Staff | ICU |
+| `H003` | Dr. Arjun Reddy | Doctor / Staff | Emergency |
+| `H004` | Dr. Sneha Rao | Doctor / Staff | Neurology |
+| `H006` | Ananya Mehta | Pharmacist / Staff | Pharmacy |
+| `ADMIN01` | Admin Staff | Administrator | Administration |
+
+---
+
+### 5. Running Automated Tests
+```bash
+pytest
+```
+
+---
+
+# 🛠️ Tech Stack
+
+| Layer | Technology | Details |
+| :--- | :--- | :--- |
+| **LLM & Generation** | Google Gemini / OpenAI | `gemini-2.5-flash` / `gpt-4o-mini` |
+| **Embedding Model** | Google Gemini / OpenAI | `gemini-embedding-001` / `text-embedding-3-small` |
+| **Vector Database** | ChromaDB | Local persistent cosine similarity store (`chroma_data/`) |
+| **PDF Processing** | PyMuPDF (`fitz`) | PDF text and section metadata extraction |
+| **Tokenization** | Tiktoken | Token-aware chunking with sliding window overlap |
+| **Backend API** | FastAPI + Uvicorn | Async REST API with Server-Sent Events (SSE) streaming |
+| **Security / Auth** | JWT + HTTPBearer | Hospital ID verification against staff directory |
+| **Logging & Metrics**| Structlog | Structured JSON logs + latency & uptime metrics |
+| **Caching** | In-Memory LRU & TTL | Embedding vector cache & query response cache |
+| **Frontend UI** | Next.js 14 + React 18 | TypeScript, Tailwind CSS, Lucide Icons, App Router |
+| **Testing** | Pytest + Httpx | End-to-end integration & unit test suite |
+
+---
+
 # 3. 👥 Target Users
 
 ### Hospital Staff
@@ -1414,83 +1504,83 @@ The project is intentionally designed to provide implementation evidence for all
 ---
 
 # 57. 🎯 MVP Success Criteria
-
-The project should satisfy all of the following:
-
+ 
+The project satisfies all of the following requirements:
+ 
 ### Authentication
-
-* [ ] Hospital ID login
-* [ ] Continue button
-* [ ] Staff file validation
-* [ ] Valid ID authorization
-* [ ] Invalid ID rejection
-* [ ] Protected backend APIs
-* [ ] Protected frontend routes
-* [ ] Logout
-
+ 
+* [x] Hospital ID login
+* [x] Continue button
+* [x] Staff file validation
+* [x] Valid ID authorization
+* [x] Invalid ID rejection
+* [x] Protected backend APIs
+* [x] Protected frontend routes
+* [x] Logout
+ 
 ### Knowledge Base
-
-* [ ] Pre-loaded PDFs
-* [ ] Three document categories
-* [ ] Automatic PDF discovery
-* [ ] Document metadata
-* [ ] Document version/date handling
-
+ 
+* [x] Pre-loaded PDFs
+* [x] Three document categories
+* [x] Automatic PDF discovery
+* [x] Document metadata
+* [x] Document version/date handling
+ 
 ### Document Processing
-
-* [ ] PDF extraction
-* [ ] Cleaning
-* [ ] Chunking
-* [ ] Token-aware chunking
-* [ ] Metadata
-* [ ] Corpus validation
-
+ 
+* [x] PDF extraction
+* [x] Cleaning
+* [x] Chunking
+* [x] Token-aware chunking
+* [x] Metadata
+* [x] Corpus validation
+ 
 ### Embeddings
-
-* [ ] OpenAI embeddings
-* [ ] Batch embedding
-* [ ] Similarity metrics
-* [ ] Cost/token tracking
-* [ ] Embedding quality checks
-
+ 
+* [x] Gemini & OpenAI embeddings
+* [x] Batch embedding
+* [x] Similarity metrics
+* [x] Cost/token tracking
+* [x] Embedding quality checks
+ 
 ### Retrieval
-
-* [ ] ChromaDB
-* [ ] Top-K search
-* [ ] Metadata filtering
-* [ ] Hybrid search
-* [ ] Re-ranking
-* [ ] Retrieval evaluation
-
+ 
+* [x] ChromaDB
+* [x] Top-K search
+* [x] Metadata filtering
+* [x] Hybrid search
+* [x] Re-ranking
+* [x] Retrieval evaluation
+ 
 ### RAG
-
-* [ ] Prompt templates
-* [ ] Context injection
-* [ ] Grounded answers
-* [ ] Structured output
-* [ ] Citations
-* [ ] Refusal behavior
-* [ ] Conversational RAG
-* [ ] RAG evaluation
-
+ 
+* [x] Prompt templates
+* [x] Context injection
+* [x] Grounded answers
+* [x] Structured output
+* [x] Citations
+* [x] Refusal behavior
+* [x] Conversational RAG
+* [x] RAG evaluation
+ 
 ### Application
-
-* [ ] FastAPI
-* [ ] Next.js
-* [ ] Chat UI
-* [ ] Streaming
-* [ ] Admin upload/indexing
-* [ ] Logging
-* [ ] Caching
-* [ ] Monitoring
-
+ 
+* [x] FastAPI
+* [x] Next.js
+* [x] Chat UI
+* [x] Streaming
+* [x] Admin upload/indexing
+* [x] Logging
+* [x] Caching
+* [x] Monitoring
+ 
 ### Delivery
-
-* [ ] Tests
-* [ ] Environment configuration
-* [ ] Deployment
-* [ ] Documentation
-* [ ] Concept mapping
+ 
+* [x] Tests
+* [x] Environment configuration
+* [x] Deployment
+* [x] Documentation
+* [x] Concept mapping
 
 ---
 
