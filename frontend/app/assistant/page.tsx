@@ -21,7 +21,7 @@ export default function AssistantPage() {
   if (!user) return null;
 
   return (
-    <div className="py-2">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
       <ChatWindow />
     </div>
   );
