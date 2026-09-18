@@ -37,6 +37,7 @@ export default function AdminPage() {
   // Upload modal/form state
   const [file, setFile] = useState<File | null>(null);
   const [docType, setDocType] = useState('clinical_protocol');
+  const [customCategory, setCustomCategory] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -77,13 +78,16 @@ export default function AdminPage() {
     e.preventDefault();
     if (!file) return;
 
+    const finalCategory = docType === 'custom' ? (customCategory.trim() || 'general_document') : docType;
+
     setUploading(true);
     setUploadMessage(null);
 
     try {
-      const res = await uploadDocument(file, docType);
+      const res = await uploadDocument(file, finalCategory);
       setUploadMessage({ text: res.message, type: 'success' });
       setFile(null);
+      setCustomCategory('');
       await loadData();
     } catch (err: any) {
       setUploadMessage({ text: err.message || 'Upload failed.', type: 'error' });
@@ -221,7 +225,25 @@ export default function AdminPage() {
                 <option value="clinical_protocol">Clinical Protocol</option>
                 <option value="drug_interaction_guideline">Drug Interaction Guideline</option>
                 <option value="policy_circular">Policy Circular</option>
+                <option value="surgical_guideline">Surgical Protocol / Guideline</option>
+                <option value="emergency_sop">Emergency SOP / Manual</option>
+                <option value="lab_manual">Laboratory Manual</option>
+                <option value="custom">✏️ Other / Custom Category...</option>
               </select>
+
+              {docType === 'custom' && (
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    required
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    placeholder="Enter custom category (e.g. Radiology SOP, Training Guide)..."
+                    className="w-full text-xs rounded-xl px-3 py-2.5 focus:outline-none transition-all"
+                    style={{ background: '#f8fafc', border: '1.5px solid var(--primary)', color: 'var(--text)' }}
+                  />
+                </div>
+              )}
             </div>
 
             <div>

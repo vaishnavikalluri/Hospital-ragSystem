@@ -46,7 +46,7 @@ export default function DocumentsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl shadow-sm"
         style={{ background: 'white', border: '1px solid var(--border)' }}>
@@ -102,10 +102,15 @@ export default function DocumentsPage() {
             onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; }}
             onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; }}
           >
-            <option value="">All Document Types</option>
-            <option value="clinical_protocol">Clinical Protocols</option>
-            <option value="drug_interaction_guideline">Drug Guidelines</option>
-            <option value="policy_circular">Policy Circulars</option>
+            <option value="">All Categories</option>
+            {Array.from(new Set(documents.map((d) => d.document_type).filter(Boolean))).map((type) => {
+              const label = type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+              return (
+                <option key={type} value={type}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>

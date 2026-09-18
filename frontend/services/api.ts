@@ -290,3 +290,11 @@ export async function deleteDocument(docName: string): Promise<void> {
     throw new Error(err.detail || 'Failed to delete document.');
   }
 }
+
+export function getDocumentFileUrl(documentName: string, page?: number): string {
+  const token = getToken();
+  const base = `${API_BASE_URL}/api/documents/${encodeURIComponent(documentName)}/file`;
+  const query = token ? `?token=${encodeURIComponent(token)}` : '';
+  const hash = page ? `#page=${page}` : '';
+  return `${base}${query}${hash}`;
+}

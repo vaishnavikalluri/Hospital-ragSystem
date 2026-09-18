@@ -72,13 +72,10 @@ async def upload_document(
     Uses the same pipeline as pre-loaded documents:
     Upload → Validate → Extract → Clean → Chunk → Metadata → Embed → ChromaDB
     """
-    # Validate document type
-    valid_types = list(DOCUMENT_TYPE_MAP.values())
-    if document_type not in valid_types:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid document_type. Must be one of: {valid_types}",
-        )
+    # Clean / sanitize document type (supports both standard and any custom categories)
+    clean_doc_type = document_type.strip().lower().replace(" ", "_").replace("-", "_")
+    if not clean_doc_type:
+        clean_doc_type = "general_document"
 
     # Validate file type
     if file.content_type not in ALLOWED_CONTENT_TYPES:
@@ -98,30 +95,35 @@ async def upload_document(
         "admin_upload_started",
         admin=admin_user.hospital_id,
         filename=file.filename,
-        doc_type=document_type,
+        doc_type=clean_doc_type,
     )
 
-    # Save to temp file
-    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-        content = await file.read()
+    safe_filename = Path(file.filename).name
+    cat_dir_name = next((k for k, v in DOCUMENT_TYPE_MAP.items() if v == clean_doc_type), f"{clean_doc_type}s" if not clean_doc_type.endswith("s") else clean_doc_type)
+    target_dir = settings.documents_path / cat_dir_name
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_path = target_dir / safe_filename
 
-        # Check file size
-        size_mb = len(content) / (1024 * 1024)
-        if size_mb > MAX_FILE_SIZE_MB:
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail=f"File exceeds {MAX_FILE_SIZE_MB}MB limit.",
-            )
+    content = await file.read()
+    # Check file size
+    size_mb = len(content) / (1024 * 1024)
+    if size_mb > MAX_FILE_SIZE_MB:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File exceeds {MAX_FILE_SIZE_MB}MB limit.",
+        )
 
-        tmp.write(content)
-        tmp_path = Path(tmp.name)
+    with open(target_path, "wb") as f:
+        f.write(content)
 
     try:
         pipeline = _get_processing_pipeline(settings)
 
         # Load the uploaded document
-        loaded = pipeline["loader"].load_single(tmp_path, document_type)
+        loaded = pipeline["loader"].load_single(target_path, clean_doc_type)
         if not loaded.loaded_successfully:
+            if target_path.exists():
+                target_path.unlink()
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"Failed to extract text from PDF: {loaded.load_error}",
@@ -130,6 +132,8 @@ async def upload_document(
         # Clean
         cleaned_pages = pipeline["cleaner"].clean_pages(loaded.pages)
         if not cleaned_pages:
+            if target_path.exists():
+                target_path.unlink()
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="The PDF appears to have no extractable text content.",
@@ -137,7 +141,7 @@ async def upload_document(
 
         # Override document name to use the uploaded filename
         for page in cleaned_pages:
-            page.document_name = file.filename
+            page.document_name = safe_filename
 
         # Chunk
         chunks = pipeline["chunker"].chunk_pages(cleaned_pages)
@@ -146,10 +150,10 @@ async def upload_document(
         header_text = cleaned_pages[0].raw_text if cleaned_pages else ""
         chunks = pipeline["metadata_extractor"].enrich_chunks(chunks, header_text)
         for chunk in chunks:
-            chunk.document_name = file.filename
+            chunk.document_name = safe_filename
 
         # Remove existing chunks for this document if re-uploading
-        pipeline["chroma"].delete_document(file.filename)
+        pipeline["chroma"].delete_document(safe_filename)
 
         # Embed
         texts = [c.text for c in chunks]
@@ -166,15 +170,15 @@ async def upload_document(
 
         logger.info(
             "admin_upload_complete",
-            filename=file.filename,
+            filename=safe_filename,
             chunks=len(chunks),
         )
 
         return UploadResponse(
             success=True,
-            filename=file.filename,
-            document_type=document_type,
-            message=f"Successfully uploaded and indexed '{file.filename}' ({len(chunks)} chunks).",
+            filename=safe_filename,
+            document_type=clean_doc_type,
+            message=f"Successfully uploaded and indexed '{safe_filename}' ({len(chunks)} chunks).",
             chunk_count=len(chunks),
         )
 
@@ -182,15 +186,15 @@ async def upload_document(
         raise
     except Exception as exc:
         logger.error("admin_upload_error", error=str(exc))
+        if target_path.exists():
+            try:
+                target_path.unlink()
+            except Exception:
+                pass
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Upload processing failed: {str(exc)}",
         )
-    finally:
-        try:
-            os.unlink(tmp_path)
-        except Exception:
-            pass
 
 
 @router.post("/documents/index", response_model=IndexResponse)
@@ -322,6 +326,16 @@ async def delete_document(
     """Admin-only: Remove a document from the knowledge base."""
     chroma = ChromaClient(settings)
     deleted = chroma.delete_document(document_name)
+
+    # Clean up from disk if file exists in documents directory
+    for cat_dir in DOCUMENT_TYPE_MAP.keys():
+        doc_path = settings.documents_path / cat_dir / document_name
+        if doc_path.exists():
+            try:
+                doc_path.unlink()
+                logger.info("admin_document_disk_deleted", path=str(doc_path))
+            except Exception as e:
+                logger.warning("admin_document_disk_delete_failed", path=str(doc_path), error=str(e))
 
     if deleted == 0:
         raise HTTPException(
