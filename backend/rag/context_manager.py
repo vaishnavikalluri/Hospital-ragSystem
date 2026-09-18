@@ -8,7 +8,10 @@ from __future__ import annotations
 
 from typing import List
 
-import tiktoken
+try:
+    import tiktoken
+except (ImportError, Exception):
+    tiktoken = None
 
 from backend.monitoring.logger import get_logger
 
@@ -46,10 +49,15 @@ class ContextManager:
         self.max_context_tokens = max_context_tokens
         self.max_history_messages = max_history_messages
 
-        try:
-            self._enc = tiktoken.encoding_for_model(model_name)
-        except Exception:
-            self._enc = tiktoken.get_encoding("cl100k_base")
+        self._enc = None
+        if tiktoken is not None:
+            try:
+                self._enc = tiktoken.encoding_for_model(model_name)
+            except Exception:
+                try:
+                    self._enc = tiktoken.get_encoding("cl100k_base")
+                except Exception:
+                    self._enc = None
 
         context_window = MODEL_CONTEXT_WINDOWS.get(model_name, DEFAULT_CONTEXT_WINDOW)
         # Reserve tokens for system prompt + answer
@@ -59,8 +67,13 @@ class ContextManager:
         )
 
     def count_tokens(self, text: str) -> int:
-        """Count tokens in a string. Concept 5."""
-        return len(self._enc.encode(text))
+        """Count tokens in a string with fallback if tiktoken is not available. Concept 5."""
+        if self._enc is not None:
+            try:
+                return len(self._enc.encode(text))
+            except Exception:
+                pass
+        return max(1, len(text) // 4)
 
     def count_messages_tokens(self, messages: List[dict]) -> int:
         """Count total tokens in a list of chat messages."""

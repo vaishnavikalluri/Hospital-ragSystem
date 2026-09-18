@@ -9,7 +9,10 @@ from __future__ import annotations
 import time
 from typing import List, Optional
 
-import tiktoken
+try:
+    import tiktoken
+except (ImportError, Exception):
+    tiktoken = None
 from openai import OpenAI, RateLimitError, APIError
 
 from backend.app.config import Settings
@@ -39,7 +42,12 @@ class EmbeddingClient:
         self.model = settings.effective_embedding_model
         self._client: Optional[OpenAI] = None
         self.cost_tracker = cost_tracker or CostTracker(settings)
-        self._tokenizer = tiktoken.get_encoding("cl100k_base")
+        self._tokenizer = None
+        if tiktoken is not None:
+            try:
+                self._tokenizer = tiktoken.get_encoding("cl100k_base")
+            except Exception:
+                self._tokenizer = None
 
     def _get_client(self) -> OpenAI:
         if self._client is None:
@@ -54,8 +62,14 @@ class EmbeddingClient:
         return self._client
 
     def count_tokens(self, text: str) -> int:
-        """Count tokens in a string using tiktoken."""
-        return len(self._tokenizer.encode(text))
+        """Count tokens in a string using tiktoken or fallback estimation."""
+        if self._tokenizer is not None:
+            try:
+                return len(self._tokenizer.encode(text))
+            except Exception:
+                pass
+        # Fallback approximation: ~4 characters per token
+        return max(1, len(text) // 4)
 
     def embed_texts(
         self,

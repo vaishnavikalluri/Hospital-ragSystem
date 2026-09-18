@@ -85,7 +85,7 @@ class Settings(BaseSettings):
     jwt_expire_hours: int = 8
 
     # Admin hospital IDs (comma-separated)
-    admin_hospital_ids: str = ""
+    admin_hospital_ids: str = "ADMIN01"
 
     # ── Paths ─────────────────────────────────────────────────
     hospital_staff_csv: str = "./data/hospital_staff.csv"

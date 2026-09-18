@@ -74,7 +74,7 @@ class DocumentLoader:
     def discover_documents(self) -> List[Tuple[Path, str]]:
         """
         Recursively discover all PDF files, returning (path, document_type) pairs.
-        Document type is determined by parent directory name.
+        Supports both predefined categories and any custom category folder.
         """
         found: List[Tuple[Path, str]] = []
 
@@ -82,17 +82,17 @@ class DocumentLoader:
             logger.warning("documents_dir_missing", path=str(self.documents_dir))
             return found
 
-        for category_dir, doc_type in DOCUMENT_TYPE_MAP.items():
-            cat_path = self.documents_dir / category_dir
-            if not cat_path.exists():
-                logger.info("category_dir_missing", category=category_dir)
-                continue
-
-            pdfs = sorted(cat_path.glob("**/*.pdf"))
-            for pdf_path in pdfs:
-                if pdf_path.is_file():
-                    found.append((pdf_path, doc_type))
-                    logger.debug("pdf_discovered", path=str(pdf_path), doc_type=doc_type)
+        seen_paths = set()
+        for pdf_path in sorted(self.documents_dir.glob("**/*.pdf")):
+            if pdf_path.is_file() and pdf_path not in seen_paths:
+                seen_paths.add(pdf_path)
+                parent_name = pdf_path.parent.name
+                if parent_name == self.documents_dir.name or not parent_name:
+                    doc_type = "general_document"
+                else:
+                    doc_type = DOCUMENT_TYPE_MAP.get(parent_name, parent_name.rstrip("s"))
+                found.append((pdf_path, doc_type))
+                logger.debug("pdf_discovered", path=str(pdf_path), doc_type=doc_type)
 
         logger.info("documents_discovered", total=len(found))
         return found

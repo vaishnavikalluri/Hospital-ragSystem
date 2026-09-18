@@ -11,7 +11,10 @@ import uuid
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-import tiktoken
+try:
+    import tiktoken
+except (ImportError, Exception):
+    tiktoken = None
 
 from backend.ingestion.document_loader import RawPage
 from backend.monitoring.logger import get_logger
@@ -58,14 +61,24 @@ class TokenAwareChunker:
     ) -> None:
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
-        try:
-            self._enc = tiktoken.get_encoding(model_name)
-        except Exception:
-            self._enc = tiktoken.get_encoding("cl100k_base")
+        self._enc = None
+        if tiktoken is not None:
+            try:
+                self._enc = tiktoken.get_encoding(model_name)
+            except Exception:
+                try:
+                    self._enc = tiktoken.get_encoding("cl100k_base")
+                except Exception:
+                    self._enc = None
 
     def count_tokens(self, text: str) -> int:
         """Count the number of tokens in a string."""
-        return len(self._enc.encode(text))
+        if self._enc is not None:
+            try:
+                return len(self._enc.encode(text))
+            except Exception:
+                pass
+        return max(1, len(text) // 4)
 
     def _split_into_sentences(self, text: str) -> List[str]:
         """
@@ -107,17 +120,31 @@ class TokenAwareChunker:
 
             # If a single unit exceeds chunk_size, split it hard
             if unit_tokens > self.chunk_size:
-                tokens = self._enc.encode(unit)
-                for start in range(0, len(tokens), self.chunk_size - self.chunk_overlap):
-                    segment_tokens = tokens[start : start + self.chunk_size]
-                    segment_text = self._enc.decode(segment_tokens)
-                    chunk = self._make_chunk(
-                        text=segment_text,
-                        page=page,
-                        idx=doc_chunk_offset + len(chunks),
-                        token_count=len(segment_tokens),
-                    )
-                    chunks.append(chunk)
+                if self._enc is not None:
+                    tokens = self._enc.encode(unit)
+                    for start in range(0, len(tokens), self.chunk_size - self.chunk_overlap):
+                        segment_tokens = tokens[start : start + self.chunk_size]
+                        segment_text = self._enc.decode(segment_tokens)
+                        chunk = self._make_chunk(
+                            text=segment_text,
+                            page=page,
+                            idx=doc_chunk_offset + len(chunks),
+                            token_count=len(segment_tokens),
+                        )
+                        chunks.append(chunk)
+                else:
+                    # Character-level fallback split
+                    char_chunk_size = self.chunk_size * 4
+                    char_overlap = self.chunk_overlap * 4
+                    for start in range(0, len(unit), max(1, char_chunk_size - char_overlap)):
+                        segment_text = unit[start : start + char_chunk_size]
+                        chunk = self._make_chunk(
+                            text=segment_text,
+                            page=page,
+                            idx=doc_chunk_offset + len(chunks),
+                            token_count=self.count_tokens(segment_text),
+                        )
+                        chunks.append(chunk)
                 continue
 
             # If adding this unit exceeds budget, flush

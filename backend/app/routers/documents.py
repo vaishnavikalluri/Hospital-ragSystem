@@ -8,7 +8,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import FileResponse
 
 from backend.app.config import Settings, get_settings
 from backend.app.dependencies import get_current_user
@@ -94,4 +95,53 @@ async def list_documents(
         documents=docs,
         total=len(docs),
         by_type=by_type,
+    )
+
+
+@router.get("/{document_name}/file")
+async def get_document_file(
+    document_name: str,
+    token: str | None = None,
+    authorization: str | None = None,
+    settings: Settings = Depends(get_settings),
+) -> FileResponse:
+    """
+    Serve the PDF file inline so the browser can render it in a new tab.
+    Supports auth via ?token=... or Authorization header.
+    """
+    from fastapi import Header
+    from backend.app.dependencies import get_auth
+
+    auth = get_auth()
+    user = None
+    if token:
+        user = auth.verify_token(token)
+    elif authorization and authorization.startswith("Bearer "):
+        user = auth.verify_token(authorization[7:])
+
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required to view document.",
+        )
+
+    safe_name = Path(document_name).name
+    found_path = None
+    if settings.documents_path.exists():
+        for file_path in settings.documents_path.glob(f"**/{safe_name}"):
+            if file_path.is_file():
+                found_path = file_path
+                break
+
+    if not found_path or not found_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Document '{safe_name}' not found on server.",
+        )
+
+    return FileResponse(
+        path=str(found_path),
+        media_type="application/pdf",
+        filename=safe_name,
+        content_disposition_type="inline",
     )
