@@ -1,0 +1,10 @@
+hospital_id,name,department
+H001,Dr. Rahul Sharma,Cardiology
+H002,Priya Kumar,ICU
+H003,Dr. Arjun Reddy,Emergency
+H004,Dr. Sneha Rao,Neurology
+H005,Dr. Kiran Patel,Pediatrics
+H006,Ananya Mehta,Pharmacy
+H007,Dr. Vikram Singh,General Medicine
+H008,Neha Verma,Radiology
+ADMIN01,Admin Staff,Administration

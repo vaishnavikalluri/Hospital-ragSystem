@@ -35,6 +35,18 @@ class HospitalAuth:
     Handles Hospital ID validation against hospital_staff.csv and JWT issuance.
     """
 
+    DEFAULT_STAFF = {
+        "ADMIN01": "Admin Staff",
+        "H001": "Dr. Rahul Sharma",
+        "H002": "Priya Kumar",
+        "H003": "Dr. Arjun Reddy",
+        "H004": "Dr. Sneha Rao",
+        "H005": "Dr. Kiran Patel",
+        "H006": "Ananya Mehta",
+        "H007": "Dr. Vikram Singh",
+        "H008": "Neha Verma",
+    }
+
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self._staff: Dict[str, str] = {}  # hospital_id -> name
