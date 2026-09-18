@@ -50,17 +50,22 @@ async def list_documents(
     docs: List[DocumentInfo] = []
     by_type: Dict[str, int] = {}
 
+    from datetime import datetime, timezone
+
     # Indexed documents
     for doc in indexed_docs:
         doc_type = doc.get("document_type", "unknown")
         by_type[doc_type] = by_type.get(doc_type, 0) + 1
 
-        # Try to get file size from disk
+        # Try to get file size and uploaded time from disk
         file_size = 0
+        uploaded_at_str = doc.get("indexed_at")
         for path, dtype in discovered:
             if path.name == doc["document_name"]:
                 try:
-                    file_size = path.stat().st_size
+                    stat = path.stat()
+                    file_size = stat.st_size
+                    uploaded_at_str = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat()
                 except OSError:
                     pass
                 break
@@ -73,6 +78,9 @@ async def list_documents(
                 chunk_count=doc.get("chunk_count", 0),
                 file_size_bytes=file_size,
                 indexed=True,
+                indexed_at=doc.get("indexed_at"),
+                uploaded_at=uploaded_at_str,
+                created_at=uploaded_at_str,
             )
         )
 
@@ -80,16 +88,33 @@ async def list_documents(
     for path, doc_type in discovered:
         if path.name not in indexed_names:
             by_type[doc_type] = by_type.get(doc_type, 0) + 1
+            file_size = 0
+            uploaded_at_str = None
+            try:
+                stat = path.stat()
+                file_size = stat.st_size
+                uploaded_at_str = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat()
+            except OSError:
+                pass
+
             docs.append(
                 DocumentInfo(
                     name=path.name,
                     document_type=doc_type,
                     page_count=0,
                     chunk_count=0,
-                    file_size_bytes=path.stat().st_size if path.exists() else 0,
+                    file_size_bytes=file_size,
                     indexed=False,
+                    uploaded_at=uploaded_at_str,
+                    created_at=uploaded_at_str,
                 )
             )
+
+    # Sort documents so newly uploaded documents appear at the top
+    docs.sort(
+        key=lambda d: d.uploaded_at or d.created_at or d.indexed_at or "",
+        reverse=True,
+    )
 
     return DocumentListResponse(
         documents=docs,

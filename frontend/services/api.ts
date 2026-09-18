@@ -46,6 +46,8 @@ export interface DocumentInfo {
   file_size_bytes: number;
   indexed: boolean;
   indexed_at?: string;
+  uploaded_at?: string;
+  created_at?: string;
 }
 
 export interface DocumentListResponse {

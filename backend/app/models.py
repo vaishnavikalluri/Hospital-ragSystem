@@ -73,6 +73,8 @@ class DocumentInfo(BaseModel):
     file_size_bytes: int
     indexed: bool
     indexed_at: Optional[str] = None
+    uploaded_at: Optional[str] = None
+    created_at: Optional[str] = None
 
 
 class DocumentListResponse(BaseModel):
