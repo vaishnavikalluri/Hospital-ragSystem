@@ -42,6 +42,48 @@ async def lifespan(app: FastAPI):
             hint="Place hospital_staff.csv in data/ directory",
         )
 
+    # Auto-index initial documents if ChromaDB collection is empty
+    if settings.active_api_key:
+        try:
+            from backend.vectordb.chroma_client import ChromaClient
+            from backend.ingestion.document_loader import DocumentLoader
+            chroma = ChromaClient(settings)
+            if chroma.collection_count() == 0:
+                loader = DocumentLoader(settings.documents_path)
+                docs = loader.load_all()
+                if docs:
+                    logger.info("auto_indexing_started", doc_count=len(docs))
+                    from backend.ingestion.text_cleaner import TextCleaner
+                    from backend.ingestion.chunker import TokenAwareChunker
+                    from backend.ingestion.metadata_extractor import MetadataExtractor
+                    from backend.embeddings.cost_tracker import get_cost_tracker
+                    from backend.embeddings.embedding_client import EmbeddingClient
+
+                    cleaner = TextCleaner()
+                    chunker = TokenAwareChunker(chunk_size=settings.chunk_size, chunk_overlap=settings.chunk_overlap)
+                    meta_extractor = MetadataExtractor()
+                    all_chunks = []
+                    for doc in docs:
+                        if not doc.loaded_successfully:
+                            continue
+                        cleaned = cleaner.clean_pages(doc.pages)
+                        if not cleaned:
+                            continue
+                        chunks = chunker.chunk_pages(cleaned)
+                        header = cleaned[0].raw_text if cleaned else ""
+                        chunks = meta_extractor.enrich_chunks(chunks, header)
+                        all_chunks.extend(chunks)
+
+                    if all_chunks:
+                        cost_tracker = get_cost_tracker(settings)
+                        embedder = EmbeddingClient(settings, cost_tracker)
+                        texts = [c.text for c in all_chunks]
+                        embeddings = embedder.embed_texts(texts)
+                        chroma.index_chunks(all_chunks, embeddings)
+                        logger.info("auto_indexing_complete", chunks_count=len(all_chunks))
+        except Exception as e:
+            logger.warning("auto_indexing_skipped", error=str(e))
+
     yield
 
     logger.info("app_shutdown")
